@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Property Mapper</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--txt:#e5e7eb;--mut:#94a3b8;--acc:#22c55e;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--txt)}
+#map{position:absolute;inset:0;z-index:0;background:#0b1220}
+.home{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;z-index:5}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:28px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.card h1{margin:0 0 6px;font-size:22px}
+.card p{color:var(--mut);margin:0 0 18px;font-size:14px;line-height:1.5}
+input,select,textarea,button{font:inherit}
+.ti{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:#0b1220;color:var(--txt);margin-bottom:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 14px;border-radius:10px;border:1px solid var(--line);background:#1f2937;color:var(--txt);cursor:pointer;font-size:14px}
+.btn:hover{background:#273449}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#04210f;font-weight:600}
+.btn.pri:hover{filter:brightness(1.05)}
+.btn.on{background:#2563eb;border-color:#2563eb;color:#fff}
+.btn.sm{padding:7px 9px;font-size:13px}
+.topbar{position:absolute;top:0;left:0;right:0;z-index:6;display:flex;gap:8px;align-items:center;padding:8px;background:linear-gradient(#0f172af0,#0f172a00)}
+.topbar .name{flex:1;min-width:0;background:transparent;border:none;color:#fff;font-size:16px;font-weight:600;padding:6px 4px}
+.topbar .name:focus{outline:none;background:#0b1220;border-radius:8px}
+.tools{position:absolute;left:8px;top:54px;z-index:6;display:flex;flex-direction:column;gap:6px}
+.tools .btn{width:46px;height:46px;font-size:18px;background:#111827e6;backdrop-filter:blur(4px)}
+.cat{position:absolute;left:60px;top:54px;z-index:6;background:#111827f0;border:1px solid var(--line);border-radius:10px;padding:8px;width:210px;display:none}
+.cat.show{display:block}
+.cat label{font-size:11px;color:var(--mut);display:block;margin:0 0 4px}
+.cat select{width:100%;padding:9px;border-radius:8px;border:1px solid var(--line);background:#0b1220;color:var(--txt)}
+.draw-hint{position:absolute;left:50%;transform:translateX(-50%);top:58px;z-index:6;background:#2563ebee;color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;display:none;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.draw-hint.show{display:block}
+.gpsbar{position:absolute;left:50%;transform:translateX(-50%);bottom:84px;z-index:6;display:flex;gap:8px;align-items:center}
+.gpsbar .btn{background:#111827ee;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.actionbar{position:absolute;left:50%;transform:translateX(-50%);bottom:18px;z-index:6;display:none;gap:8px}
+.actionbar.show{display:flex}
+.actionbar .btn{box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.panel{position:absolute;top:0;right:0;bottom:0;width:330px;max-width:88vw;z-index:7;background:#0f172af7;backdrop-filter:blur(6px);border-left:1px solid var(--line);transform:translateX(100%);transition:transform .22s;display:flex;flex-direction:column}
+.panel.open{transform:none}
+.panel header{display:flex;align-items:center;gap:8px;padding:12px;border-bottom:1px solid var(--line)}
+.panel header b{flex:1}
+.list{flex:1;overflow:auto;padding:8px}
+.frow{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid var(--line);border-radius:10px;margin-bottom:7px;background:#111827}
+.frow .dot{width:14px;height:14px;border-radius:50%;flex:none;border:1px solid #0006}
+.frow .meta{flex:1;min-width:0}
+.frow .meta .t{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frow .meta .s{font-size:11px;color:var(--mut)}
+.frow .x{color:#f87171;cursor:pointer;padding:4px}
+.empty{color:var(--mut);text-align:center;font-size:13px;padding:24px 12px}
+.legend{padding:10px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--mut)}
+.save{position:absolute;left:8px;bottom:18px;z-index:6;font-size:12px;color:var(--mut);background:#0b1220cc;padding:5px 10px;border-radius:999px}
+.pop b{display:block;margin-bottom:4px}
+.pop input,.pop select,.pop textarea{width:100%;margin:3px 0;padding:6px;border-radius:6px;border:1px solid var(--line);background:#0b1220;color:var(--txt)}
+.pop .row{display:flex;gap:6px;margin-top:6px}
+.leaflet-popup-content-wrapper{background:#111827;color:var(--txt)}
+.leaflet-popup-tip{background:#111827}
+.measure{position:absolute;left:50%;transform:translateX(-50%);bottom:48px;z-index:6;background:#0b1220e6;border:1px solid var(--line);color:var(--txt);padding:6px 12px;border-radius:999px;font-size:13px;display:none}
+.measure.show{display:block}
+@media (max-width:640px){.panel{width:100%}}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="home" id="home" style="display:none">
+  <div class="card">
+    <h1>Property Mapper</h1>
+    <p>Walk a property with your phone and drop GPS-located pins, lines and zones &mdash; sprinklers, ponds, driveways, trails, property borders and more. Open the same link on your PC to view and edit live.</p>
+    <input class="ti" id="newname" placeholder="Property name (e.g. 123 Oak St)">
+    <button class="btn pri" id="createBtn" style="width:100%">Create new property map</button>
+  </div>
+</div>
+<div class="topbar" id="topbar" style="display:none">
+  <button class="btn sm" id="homeBtn" title="New map">&#9776;</button>
+  <input class="name" id="mapname" placeholder="Property name">
+  <button class="btn sm" id="shareBtn">Share</button>
+</div>
+<div class="tools" id="tools" style="display:none">
+  <button class="btn" id="tPan" title="Pan / select">&#9995;</button>
+  <button class="btn" id="tPoint" title="Drop pin">&#128205;</button>
+  <button class="btn" id="tLine" title="Draw line (pipe, trail, driveway)">&#9585;</button>
+  <button class="btn" id="tPoly" title="Draw area (zone, pond, border)">&#11039;</button>
+  <button class="btn" id="tList" title="Feature list">&#9776;</button>
+</div>
+<div class="cat" id="catbox">
+  <label>Category for next feature</label>
+  <select id="catsel"></select>
+</div>
+<div class="draw-hint" id="hint"></div>
+<div class="measure" id="measure"></div>
+<div class="gpsbar" id="gpsbar" style="display:none">
+  <button class="btn" id="locBtn" title="Find me">&#128225; Locate</button>
+  <button class="btn" id="followBtn" title="Follow my position">Follow: off</button>
+</div>
+<div class="actionbar" id="actionbar">
+  <button class="btn" id="gpsAdd">&#128205; Add point at my GPS</button>
+  <button class="btn" id="undoPt">Undo</button>
+  <button class="btn pri" id="finishBtn">Finish</button>
+  <button class="btn" id="cancelBtn">Cancel</button>
+</div>
+<div class="save" id="save" style="display:none">saved</div>
+<div class="panel" id="panel">
+  <header><b>Features</b><button class="btn sm" id="closePanel">Close</button></header>
+  <div class="list" id="flist"></div>
+  <div class="legend" id="counts"></div>
+</div>
+<script>
+(function(){
+// ====== CONFIG: points at your live Supabase backend ======
+var API = 'https://qfofedmundvdiqtcrmqe.supabase.co/functions/v1/property-mapper';
+// ==========================================================
+var qs = new URLSearchParams(location.search);
+var mapId = qs.get('id');
+
+var CATS = [
+ {k:'head', label:'Sprinkler head', kind:'point', color:'#22c55e'},
+ {k:'valve', label:'Valve', kind:'point', color:'#f59e0b'},
+ {k:'controller', label:'Controller / box', kind:'point', color:'#3b82f6'},
+ {k:'tree', label:'Tree / plant', kind:'point', color:'#15803d'},
+ {k:'photo', label:'Photo / note', kind:'point', color:'#a855f7'},
+ {k:'pin', label:'Generic pin', kind:'point', color:'#ef4444'},
+ {k:'pipe', label:'Pipe / mainline', kind:'line', color:'#06b6d4'},
+ {k:'driveway', label:'Driveway', kind:'line', color:'#9ca3af'},
+ {k:'trail', label:'Trail / path', kind:'line', color:'#eab308'},
+ {k:'wire', label:'Wire / cable', kind:'line', color:'#f97316'},
+ {k:'line', label:'Generic line', kind:'line', color:'#ec4899'},
+ {k:'zone', label:'Irrigation zone', kind:'polygon', color:'#22c55e'},
+ {k:'bed', label:'Bed / planting', kind:'polygon', color:'#84cc16'},
+ {k:'pond', label:'Pond / water', kind:'polygon', color:'#0ea5e9'},
+ {k:'lawn', label:'Lawn', kind:'polygon', color:'#65a30d'},
+ {k:'border', label:'Property border', kind:'polygon', color:'#ef4444'},
+ {k:'area', label:'Generic area', kind:'polygon', color:'#8b5cf6'}
+];
+function catOf(k){ for(var i=0;i<CATS.length;i++){ if(CATS[i].k===k) return CATS[i]; } return CATS[5]; }
+
+var state = { name:'', features:[], view:null, serverUpdated:null };
+var dirty=false, lastPush=0, busyDraw=false;
+var tool='pan';
+var working=null;
+var layers={};
+var map, posMarker, posCircle, lastPos=null, follow=false, watchId=null;
+
+function $(id){return document.getElementById(id);}
+function uid(){return Math.random().toString(36).slice(2,10);}
+
+function initMap(){
+ map = L.map('map',{zoomControl:true, attributionControl:true}).setView([39.5,-98.35],4);
+ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:21,maxNativeZoom:19,attribution:'Imagery &copy; Esri'}).addTo(map);
+ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:21,maxNativeZoom:19,opacity:0.9}).addTo(map);
+ map.on('click', onMapClick);
+}
+function onMapClick(e){
+ if(tool==='point'){ addPoint(e.latlng.lat, e.latlng.lng); }
+ else if(tool==='line'||tool==='polygon'){ addVertex(e.latlng.lat, e.latlng.lng); }
+}
+function startWatch(){
+ if(!navigator.geolocation){ alert('Geolocation not supported by this browser.'); return; }
+ if(watchId!==null) return;
+ watchId = navigator.geolocation.watchPosition(function(p){
+   lastPos=[p.coords.latitude,p.coords.longitude];
+   var acc=p.coords.accuracy||0;
+   if(!posMarker){
+     posMarker=L.circleMarker(lastPos,{radius:7,color:'#fff',weight:2,fillColor:'#2563eb',fillOpacity:1}).addTo(map);
+     posCircle=L.circle(lastPos,{radius:acc,color:'#2563eb',weight:1,fillColor:'#2563eb',fillOpacity:0.12}).addTo(map);
+   } else { posMarker.setLatLng(lastPos); posCircle.setLatLng(lastPos).setRadius(acc); }
+   if(follow) map.panTo(lastPos);
+ }, function(err){ alert('Location error: '+err.message); },
+ {enableHighAccuracy:true, maximumAge:1000, timeout:20000});
+}
+function locateOnce(){
+ startWatch();
+ if(lastPos){ map.setView(lastPos, Math.max(map.getZoom(),19)); }
+ else if(navigator.geolocation){ navigator.geolocation.getCurrentPosition(function(p){ lastPos=[p.coords.latitude,p.coords.longitude]; map.setView(lastPos,19);},function(e){alert('Location error: '+e.message);},{enableHighAccuracy:true}); }
+}
+function addPoint(lat,lng){
+ var c=catOf($('catsel').value);
+ var f={id:uid(),kind:'point',cat:c.k,label:'',notes:'',color:c.color,coords:[lat,lng],created_at:new Date().toISOString()};
+ state.features.push(f); renderFeature(f); markDirty(); refreshList();
+}
+function beginDraw(kind){
+ cancelDraw();
+ var c=catOf($('catsel').value);
+ working={kind:kind, color:c.color, cat:c.k, latlngs:[], layer:null};
+ busyDraw=true; setActionbar(true); setHint(kind==='line'?'Tap the map, or walk & tap Add point at my GPS to trace a line':'Tap the map, or walk corners with Add point at my GPS to outline an area');
+}
+function addVertex(lat,lng){
+ if(!working) return;
+ working.latlngs.push([lat,lng]);
+ redrawWorking(); updateMeasure();
+}
+function addVertexGPS(){
+ if(!lastPos){ locateOnce(); setHint('Getting your GPS fix... tap again in a moment'); return; }
+ if(working){ addVertex(lastPos[0],lastPos[1]); }
+ else if(tool==='point'){ addPoint(lastPos[0],lastPos[1]); }
+}
+function redrawWorking(){
+ if(working.layer){ map.removeLayer(working.layer); working.layer=null; }
+ var ll=working.latlngs;
+ if(working.kind==='line' && ll.length>=1){ working.layer=L.polyline(ll,{color:working.color,weight:4,dashArray:'6 6'}).addTo(map); }
+ if(working.kind==='polygon' && ll.length>=1){ working.layer=L.polygon(ll,{color:working.color,weight:3,fillOpacity:0.25,dashArray:'6 6'}).addTo(map); }
+ for(var i=0;i<ll.length;i++){ L.circleMarker(ll[i],{radius:4,color:'#fff',weight:1,fillColor:working.color,fillOpacity:1,interactive:false}).addTo(working.layer?working.layer:map); }
+}
+function finishDraw(){
+ if(!working){ return; }
+ var min = working.kind==='line'?2:3;
+ if(working.latlngs.length<min){ alert('Add at least '+min+' points first.'); return; }
+ var f={id:uid(),kind:working.kind,cat:working.cat,label:'',notes:'',color:working.color,coords:working.latlngs.slice(),created_at:new Date().toISOString()};
+ state.features.push(f);
+ cancelDraw(); renderFeature(f); markDirty(); refreshList();
+}
+function cancelDraw(){
+ if(working && working.layer) map.removeLayer(working.layer);
+ working=null; busyDraw=false; setActionbar(false); setHint(''); updateMeasure();
+}
+function renderFeature(f){
+ if(layers[f.id]){ map.removeLayer(layers[f.id]); delete layers[f.id]; }
+ var lyr;
+ if(f.kind==='point'){ lyr=L.circleMarker(f.coords,{radius:8,color:'#fff',weight:2,fillColor:f.color,fillOpacity:1}); }
+ else if(f.kind==='line'){ lyr=L.polyline(f.coords,{color:f.color,weight:5}); }
+ else { lyr=L.polygon(f.coords,{color:f.color,weight:3,fillOpacity:0.3}); }
+ lyr.addTo(map);
+ lyr.on('click', function(ev){ if(L.DomEvent) L.DomEvent.stop(ev); openEditor(f); });
+ layers[f.id]=lyr;
+}
+function renderAll(){
+ for(var id in layers){ map.removeLayer(layers[id]); }
+ layers={};
+ for(var i=0;i<state.features.length;i++) renderFeature(state.features[i]);
+}
+function removeFeature(id){
+ var idx=-1; for(var i=0;i<state.features.length;i++){ if(state.features[i].id===id) idx=i; }
+ if(idx<0) return;
+ state.features.splice(idx,1);
+ if(layers[id]){ map.removeLayer(layers[id]); delete layers[id]; }
+ markDirty(); refreshList(); map.closePopup();
+}
+function openEditor(f){
+ var html='<div class="pop"><b>'+(catOf(f.cat).label)+'</b>'+
+  '<input id="e_label" placeholder="Label" value="'+esc(f.label||'')+'">'+
+  '<select id="e_cat"></select>'+
+  '<textarea id="e_notes" placeholder="Notes" rows="2">'+esc(f.notes||'')+'</textarea>'+
+  measureText(f)+
+  '<div class="row"><button class="btn sm" id="e_save">Save</button><button class="btn sm" id="e_del" style="color:#f87171">Delete</button></div></div>';
+ var anchor = f.kind==='point'? f.coords : centroid(f.coords);
+ L.popup({maxWidth:240}).setLatLng(anchor).setContent(html).openOn(map);
+ var sel=document.getElementById('e_cat'); fillCatSelect(sel, f.kind, f.cat);
+ document.getElementById('e_save').onclick=function(){
+   f.label=document.getElementById('e_label').value;
+   f.notes=document.getElementById('e_notes').value;
+   var nc=document.getElementById('e_cat').value; f.cat=nc; f.color=catOf(nc).color;
+   renderFeature(f); markDirty(); refreshList(); map.closePopup();
+ };
+ document.getElementById('e_del').onclick=function(){ removeFeature(f.id); };
+}
+function toRad(d){return d*Math.PI/180;}
+function segLen(a,b){var R=6371000;var dLat=toRad(b[0]-a[0]);var dLon=toRad(b[1]-a[1]);var s=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(toRad(a[0]))*Math.cos(toRad(b[0]))*Math.sin(dLon/2)*Math.sin(dLon/2);return 2*R*Math.asin(Math.sqrt(s));}
+function pathLen(ll){var t=0;for(var i=1;i<ll.length;i++)t+=segLen(ll[i-1],ll[i]);return t;}
+function polyArea(ll){if(ll.length<3)return 0;var R=6378137;var a=0;for(var i=0;i<ll.length;i++){var p1=ll[i];var p2=ll[(i+1)%ll.length];a+=toRad(p2[1]-p1[1])*(2+Math.sin(toRad(p1[0]))+Math.sin(toRad(p2[0])));}return Math.abs(a*R*R/2);}
+function fmtLen(m){var ft=m*3.28084;if(ft<1000)return Math.round(ft)+' ft';return (ft/5280).toFixed(2)+' mi';}
+function fmtArea(m2){var ac=m2/4046.8564224;var sf=m2*10.76391;if(ac<1)return Math.round(sf).toLocaleString()+' sq ft ('+ac.toFixed(3)+' ac)';return ac.toFixed(2)+' ac ('+Math.round(sf).toLocaleString()+' sq ft)';}
+function measureText(f){ if(f.kind==='line')return '<div style="font-size:12px;color:#94a3b8;margin-top:4px">Length: '+fmtLen(pathLen(f.coords))+'</div>'; if(f.kind==='polygon')return '<div style="font-size:12px;color:#94a3b8;margin-top:4px">Area: '+fmtArea(polyArea(f.coords))+'<br>Perimeter: '+fmtLen(pathLen(f.coords)+ (f.coords.length>1?segLen(f.coords[f.coords.length-1],f.coords[0]):0))+'</div>'; return ''; }
+function updateMeasure(){ var el=$('measure'); if(!working||working.latlngs.length<2){ el.className='measure'; return;} var t=working.kind==='line'?('Length: '+fmtLen(pathLen(working.latlngs))):('Area: '+fmtArea(polyArea(working.latlngs))); el.textContent=t; el.className='measure show'; }
+function centroid(ll){var x=0,y=0;for(var i=0;i<ll.length;i++){x+=ll[i][0];y+=ll[i][1];}return [x/ll.length,y/ll.length];}
+function refreshList(){
+ var box=$('flist'); box.innerHTML='';
+ if(!state.features.length){ box.innerHTML='<div class="empty">No features yet. Use the tools on the left to drop a pin or trace a line/area, then walk the property and tap Add point at my GPS.</div>'; }
+ var counts={};
+ for(var i=0;i<state.features.length;i++){ (function(f){
+   counts[f.kind]=(counts[f.kind]||0)+1;
+   var row=document.createElement('div'); row.className='frow';
+   var sub = f.kind==='point'?'Point':(f.kind==='line'?('Line - '+fmtLen(pathLen(f.coords))):('Area - '+fmtArea(polyArea(f.coords))));
+   row.innerHTML='<span class="dot" style="background:'+f.color+'"></span><div class="meta"><div class="t">'+esc(f.label||catOf(f.cat).label)+'</div><div class="s">'+esc(catOf(f.cat).label)+' - '+sub+'</div></div><span class="x" data-id="'+f.id+'">&#10005;</span>';
+   row.querySelector('.meta').onclick=function(){ var a=f.kind==='point'?f.coords:centroid(f.coords); map.setView(a, Math.max(map.getZoom(),19)); if(window.innerWidth<640) $('panel').classList.remove('open'); openEditor(f); };
+   row.querySelector('.x').onclick=function(){ removeFeature(f.id); };
+   box.appendChild(row);
+ })(state.features[i]); }
+ $('counts').textContent = (state.features.length||0)+' features  -  '+(counts.point||0)+' pins, '+(counts.line||0)+' lines, '+(counts.polygon||0)+' areas';
+}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function fillCatSelect(sel, kind, current){ sel.innerHTML=''; for(var i=0;i<CATS.length;i++){ if(kind && CATS[i].kind!==kind) continue; var o=document.createElement('option'); o.value=CATS[i].k; o.textContent=CATS[i].label; if(CATS[i].k===current)o.selected=true; sel.appendChild(o);} }
+function setHint(t){ var h=$('hint'); if(t){h.textContent=t;h.className='draw-hint show';} else {h.className='draw-hint';} }
+function setActionbar(on){ $('actionbar').className = on?'actionbar show':'actionbar'; }
+function setTool(t){
+ tool=t; cancelDraw();
+ ['tPan','tPoint','tLine','tPoly'].forEach(function(b){ $(b).classList.remove('on'); });
+ var ids={pan:'tPan',point:'tPoint',line:'tLine',polygon:'tPoly'};
+ if(ids[t]) $(ids[t]).classList.add('on');
+ var pk = t==='point'?'point':(t==='line'?'line':(t==='polygon'?'polygon':null));
+ if(pk){ fillCatSelect($('catsel'), pk, null); $('catbox').classList.add('show'); } else { $('catbox').classList.remove('show'); }
+ if(t==='line'){ beginDraw('line'); }
+ else if(t==='polygon'){ beginDraw('polygon'); }
+ else if(t==='point'){ setHint('Tap the map to drop a pin, or walk there and tap Add point at my GPS'); setActionbar(true); $('finishBtn').style.display='none'; $('undoPt').style.display='none'; }
+ else { setActionbar(false); $('finishBtn').style.display=''; $('undoPt').style.display=''; }
+}
+function markDirty(){ dirty=true; showSave('saving...'); schedulePush(); }
+var pushTimer=null;
+function schedulePush(){ if(pushTimer)clearTimeout(pushTimer); pushTimer=setTimeout(pushNow, 800); }
+function pushNow(){
+ if(!mapId) return;
+ var body={action:'update', id:mapId, name:state.name, features:state.features, view:{lat:map.getCenter().lat,lng:map.getCenter().lng,zoom:map.getZoom()}};
+ lastPush=Date.now();
+ fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(j){ dirty=false; if(j&&j.updated_at)state.serverUpdated=j.updated_at; showSave('saved'); }).catch(function(){ showSave('offline - will retry'); schedulePush(); });
+}
+function showSave(t){ var s=$('save'); s.style.display='block'; s.textContent=t; }
+function pull(){
+ if(!mapId) return;
+ fetch(API+'?data=1&id='+encodeURIComponent(mapId)).then(function(r){return r.json();}).then(function(m){
+   if(!m||m.error) return;
+   if(state.serverUpdated && m.updated_at===state.serverUpdated) return;
+   if(dirty || busyDraw || (Date.now()-lastPush<2500)) return;
+   state.serverUpdated=m.updated_at; state.name=m.name||''; state.features=Array.isArray(m.features)?m.features:[];
+   $('mapname').value=state.name; renderAll(); refreshList();
+ }).catch(function(){});
+}
+function loadMap(){
+ fetch(API+'?data=1&id='+encodeURIComponent(mapId)).then(function(r){ if(r.status===404){throw 'nf';} return r.json(); }).then(function(m){
+   if(!m||m.error) throw 'nf';
+   state.serverUpdated=m.updated_at; state.name=m.name||'Untitled Property'; state.features=Array.isArray(m.features)?m.features:[]; state.view=m.view;
+   document.title=state.name+' - Property Mapper';
+   $('mapname').value=state.name;
+   renderAll(); refreshList();
+   if(state.view){ map.setView([state.view.lat,state.view.lng], state.view.zoom||19); }
+   else if(state.features.length){ var b=boundsOf(); if(b) map.fitBounds(b,{padding:[40,40]}); }
+   else { locateOnce(); }
+   showSave('saved');
+ }).catch(function(){ alert('Could not load this map. The link may be invalid.'); showHome(); });
+}
+function boundsOf(){ var pts=[]; for(var i=0;i<state.features.length;i++){ var f=state.features[i]; if(f.kind==='point')pts.push(f.coords); else for(var j=0;j<f.coords.length;j++)pts.push(f.coords[j]); } return pts.length?L.latLngBounds(pts):null; }
+function showHome(){ $('home').style.display='flex'; $('topbar').style.display='none'; $('tools').style.display='none'; $('gpsbar').style.display='none'; }
+function showApp(){ $('home').style.display='none'; $('topbar').style.display='flex'; $('tools').style.display='flex'; $('gpsbar').style.display='flex'; }
+function wire(){
+ $('createBtn').onclick=function(){
+   var nm=$('newname').value||'Untitled Property';
+   $('createBtn').textContent='Creating...'; $('createBtn').disabled=true;
+   fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',name:nm})}).then(function(r){return r.json();}).then(function(m){ location.search='?id='+m.share_id; }).catch(function(){ alert('Could not create map. Check your connection.'); $('createBtn').textContent='Create new property map'; $('createBtn').disabled=false; });
+ };
+ $('homeBtn').onclick=function(){ location.search=''; };
+ $('mapname').oninput=function(){ state.name=$('mapname').value; document.title=state.name+' - Property Mapper'; markDirty(); };
+ $('shareBtn').onclick=function(){ var u=location.href; if(navigator.share){ navigator.share({title:state.name,url:u}).catch(function(){}); } else { navigator.clipboard.writeText(u).then(function(){ $('shareBtn').textContent='Copied!'; setTimeout(function(){$('shareBtn').textContent='Share';},1500); }); } };
+ $('tPan').onclick=function(){ setTool('pan'); };
+ $('tPoint').onclick=function(){ setTool('point'); };
+ $('tLine').onclick=function(){ setTool('line'); };
+ $('tPoly').onclick=function(){ setTool('polygon'); };
+ $('tList').onclick=function(){ $('panel').classList.toggle('open'); };
+ $('closePanel').onclick=function(){ $('panel').classList.remove('open'); };
+ $('catsel').onchange=function(){ if(working){ working.cat=$('catsel').value; working.color=catOf(working.cat).color; redrawWorking(); } };
+ $('locBtn').onclick=locateOnce;
+ $('followBtn').onclick=function(){ follow=!follow; $('followBtn').textContent='Follow: '+(follow?'on':'off'); $('followBtn').classList.toggle('on',follow); if(follow){ startWatch(); if(lastPos)map.panTo(lastPos); } };
+ $('gpsAdd').onclick=addVertexGPS;
+ $('undoPt').onclick=function(){ if(working&&working.latlngs.length){ working.latlngs.pop(); redrawWorking(); updateMeasure(); } };
+ $('finishBtn').onclick=function(){ if(tool==='point'){ setTool('pan'); } else { finishDraw(); setTool('pan'); } };
+ $('cancelBtn').onclick=function(){ cancelDraw(); setTool('pan'); };
+ map.on('moveend', function(){ if(mapId && !busyDraw) schedulePush(); });
+}
+initMap(); wire();
+if(mapId){ showApp(); loadMap(); startWatch(); setInterval(pull, 4000); }
+else { showHome(); }
+})();
+</script>
+</body>
+</html>
